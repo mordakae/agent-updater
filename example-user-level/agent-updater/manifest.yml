@@ -1,0 +1,7 @@
+agent-updater:
+  url: https://github.com/mordakae/agent-updater
+  branch: main
+  sha:
+  applied_sha:
+  in_sync: false
+  installed_files: []

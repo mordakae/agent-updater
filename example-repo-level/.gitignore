@@ -1,0 +1,2 @@
+# Package checkouts are agent-managed clones and must never be committed (mandatory — see INSTALL.md)
+agent-updater/packages/
