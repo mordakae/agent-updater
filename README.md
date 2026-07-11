@@ -21,13 +21,21 @@ Agent Updater moves that responsibility onto the agent. The agent already starts
 Everything is built from the same primitives at two independent **levels** — user and repo — described below and in [INSTALL.md](INSTALL.md).
 
 Each level has:
-- A **manifest** (`manifest.yml`) listing packages: their git `url`, `branch` to track, the `sha` the user was last notified about, the `applied_sha` actually applied locally, whether the two are `in_sync`, and `installed_files` (a `{source, target}` map used to apply and later reverse a package's changes cleanly).
+- A **manifest** (`manifest.yml`) listing packages: their git `url`, `branch` to track, the `sha` the user was last notified about, the `applied_sha` actually applied locally, whether the two are `in_sync`, a `selection` (which of the package's Rules/Skills/Agents/Other pieces to install — see below), and `installed_files` (a `{source, target, category, item}` map used to apply and later reverse a package's changes cleanly).
 - An **update history** (`update_history.yml`): `last_update` and `update_freq` (Daily/Weekly/Monthly), which together answer "is a check due right now?"
 - A cheap **always-loaded check** (e.g. Claude Code's `CLAUDE.md`) that reads `update_history.yml` and, only if due, invokes...
-- An **on-demand skill** that does the real work: diff each package's stored sha against its remote, let the user choose Update All / decide individually with names only / decide individually with a change summary, force each accepted package's checkout to match the remote exactly (the checkout is agent-only — local drift is always discarded, never merged), then apply only the configuration-shaped parts of the diff.
-- **Install/uninstall skills**, invoked directly by request rather than by the due-check, for adding a new package to the manifest or removing one (reversing its `installed_files` and deleting its checkout).
+- An **on-demand skill** that does the real work: diff each package's stored sha against its remote, let the user choose Update All / decide individually with names only / decide individually with a change summary, force each accepted package's checkout to match the remote exactly (the checkout is agent-only — local drift is always discarded, never merged), then apply only the configuration-shaped, *selected* parts of the diff.
+- **Install/uninstall/select skills**, invoked directly by request rather than by the due-check, for adding a new package to the manifest, removing one (reversing its `installed_files` and deleting its checkout), or reconfiguring which pieces of an installed package are on disk.
 
 See `example-user-level/` and `example-repo-level/` for the concrete Claude Code implementation of both, and [INSTALL.md](INSTALL.md) for how the same shape maps onto a different agent's conventions.
+
+### Selective install
+
+A package rarely needs installing whole. At install time the agent sorts a package's files into four **sections** — **Rules**, **Skills**, **Agents**, and **Other** (MCP server configs, `settings.json` fragments, hooks, shared scripts) — and asks section by section, in that order, what you want. Each section defaults to **"Everything"** or lets you pick specific items. Nothing installs silently: even a package's MCP or settings files fall under a section you get asked about (and anything that runs a shell script or writes outside its own directory still needs explicit approval on top).
+
+The choice is stored per package as a `selection` block. A section set to **Everything** (`mode: all`) is a standing subscription: when a later update adds a new skill or agent to that section, it's installed automatically and simply reported. A section set to a **subset** installs only the items you picked; when an update brings a genuinely new item, the agent asks whether you want that one — and remembers a "no" so it isn't asked again. All of this lives in the on-demand skills and the manifest — never in the always-loaded due-check, which still reads only `update_history.yml` — so a session where no update is due pays nothing extra for it beyond the tiny standing cost of the skills being listed.
+
+Updates never re-open an existing subscription — they only ask about brand-new items. To change your mind later without waiting for an upstream change (add a skill you skipped, drop one you no longer want), invoke the **select** skill (`agent-updater-user-select` / `agent-updater-repo-select`), which re-runs the section prompts and applies the delta.
 
 ### In isolation
 
@@ -44,9 +52,22 @@ In practice this lets you split concerns cleanly: personal, cross-project toolin
 
 [multi-bot](https://github.com/mordakae/multi-bot) is the natural companion at the repo level: Agent Updater keeps packages *current*, multi-bot keeps their content *consistent across agent platforms*. In a repo that uses multi-bot, don't install package config into platform-native locations (`.claude/`, `.cursor/`, etc.) — those are generated, gitignored outputs that multi-bot's sync will clobber or orphan. Compose the two instead:
 
-- Package `installed_files` targets live under `.agent_config/` — rules into `rules/`, skills into `skills/`, agents into `agents/` — so the canonical source stays the single point of truth.
+- Package `installed_files` targets live under `.agent_config/` — rules into `rules/`, skills into `skills/`, agents into `agents/`, and **Other** items (MCP configs, settings fragments, hooks) into their multi-bot-native `.agent_config/` locations — so the canonical source stays the single point of truth.
 - After applying (or uninstalling) package changes, increment `.agent_config/agent_config_version`; multi-bot's own sync then propagates the changes to every platform on its next open.
 - Agent Updater's always-loaded due-check (building block 1 in [INSTALL.md](INSTALL.md)) is itself authored as an unscoped multi-bot rule (e.g. `.agent_config/rules/agent-updater-check.md`), and its skills as multi-bot skills. That single authoring makes Agent Updater available on every platform multi-bot supports, with no per-platform hand-translation.
 - Ordering at session start: the Agent Updater due-check runs *first* (it may change `.agent_config/` and bump the version), then multi-bot's version check — which then picks up any bump in the same session.
 
 That split is the actual point, not just a tidiness win. A single global rule set that tries to cover every repo tends to drift toward the lowest common denominator — vague enough to not break anything, specific enough to help nothing. Agent Updater lets the reusable, DRY stuff (org policy, personal conventions, cross-project skills) live once and propagate everywhere via the user level, while each repo's own config stays free to be as sharp, opinionated, and bespoke as that one codebase actually needs, at the repo level. You get the maintenance benefits of shared context and the precision of atomic, per-repo control — without either one having to compromise for the other's sake.
+
+## Persistent Context Cost
+> **What every session pays, whether or not an update is due**
+
+| Component (user level) | Tokens |
+| --- | ---: |
+| Always-loaded due-check (`CLAUDE.md`) | 196 |
+| Skill descriptions in the skills list (4 skills) | 195 |
+| **Total** | **391** |
+
+The repo level is equivalent (**399 tokens**). This is the whole standing footprint: the due-check is the only logic loaded up front, and the skills contribute just their `name` + `description`. Everything heavier — the full update/install/uninstall/select instructions — loads on demand, only when there's actually something to do, so it never touches the persistent cost. A session where an update actually runs additionally loads the update `SKILL.md` body (~1,680 tokens) for as long as that work is in flight; the install/uninstall/select bodies (~390–1,050 tokens) load only on those explicit requests.
+
+<sub>Measured locally with [tiktoken](https://github.com/openai/tiktoken) (`cl100k_base`), treat the figures as accurate to ±~10%.</sub>

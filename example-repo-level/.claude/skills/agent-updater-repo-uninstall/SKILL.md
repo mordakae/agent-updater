@@ -1,6 +1,6 @@
 ---
 name: agent-updater-repo-uninstall
-description: Remove a package from the repo-level agent-updater setup — reverse the files it installed, delete its checkout, and remove it from agent-updater/manifest.yml. Invoke when the user asks to uninstall/remove an agent-updater package at the repo level.
+description: Remove a package from the repo-level agent-updater setup — reverse its installed files, delete its checkout, and drop it from the manifest. Invoke when the user asks to uninstall/remove a repo-level package.
 ---
 
 # Agent Updater - Uninstall Package (Repo Level)
@@ -8,11 +8,11 @@ description: Remove a package from the repo-level agent-updater setup — revers
 ## Steps
 
 - Ask the user which package to remove (list the entries in `agent-updater/manifest.yml` if not already clear from context).
-- For each `{source, target}` pair in that package's `installed_files`:
+- For each entry in that package's `installed_files` (each is `{source, target, category, item}`; the `category`/`item` fields don't affect removal):
   - If `target` was created solely by this package (nothing else depends on it), delete it.
   - If `target` is shared/merged content (e.g. a section this package appended into a file another package also touches), remove only the content attributable to this package rather than deleting the whole file. If it's ambiguous which content belongs to this package, stop and ask the user before deleting anything.
 - Delete the local checkout at `agent-updater/packages/<package-name>`.
-- Remove the package's entry from `agent-updater/manifest.yml` entirely.
+- Remove the package's entry from `agent-updater/manifest.yml` entirely (including its `selection` block).
 - Confirm to the user what was removed, and flag anything left in place because it was ambiguous.
 
 ## Exception Handling

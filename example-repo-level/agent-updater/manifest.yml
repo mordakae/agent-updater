@@ -4,4 +4,10 @@ agent-updater:
   sha:
   applied_sha:
   in_sync: false
+  # selection is written when the package is installed. Per section (rules/skills/agents/other):
+  #   { mode: all }                                          -> install everything, incl. items added upstream later
+  #   { mode: subset, include: [<ids>], declined: [<ids>] }  -> only include items; declined items aren't re-offered
+  # An empty selection ({}) means "not yet chosen" and is treated as all-sections mode: all.
+  selection: {}
+  # installed_files entries are { source, target, category, item }.
   installed_files: []
