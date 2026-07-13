@@ -5,6 +5,8 @@ This tool is not Claude-specific. The `example-user-level/` and `example-repo-le
 1. **An always-loaded entry point** — whatever your agent reads at the start of every session (a system prompt file, a rules file, `AGENTS.md`, etc). This should contain *only* the cheap due-check: read `update_history.yml`, compare `last_update` + `update_freq` against today (the local date; treat an unrecognised `update_freq` as `Weekly`), and if due, invoke building block 2. Keep this minimal — it's paid for on every session whether or not an update is due.
 2. **An on-demand/invokable unit** — whatever mechanism your agent has for loading instructions only when needed (a skill, a tool, a sub-agent, an included file). This should contain the full manifest-checking, update/skip, and exception-handling logic. If your agent has no such on-demand mechanism, fold this into the always-loaded file instead — correctness matters more than the context-cost optimization.
 
+Before you place either building block, check how the agent/harness you're targeting *currently* handles (1) always-loaded session context and (2) on-demand/invokable units — its conventions may have changed since this guide or your training data was written. Use its current documentation to choose the right filenames and locations for your platform.
+
 Everything else below (file formats, the ignore rule) is agent-agnostic and applies regardless of which agent is doing the install.
 
 ## User-level install

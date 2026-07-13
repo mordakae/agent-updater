@@ -38,6 +38,7 @@ description: Check repo-level packages against their git remotes and apply or sk
     - Run `git fetch origin <branch>`, then `git reset --hard origin/<branch>` and `git clean -fd` in `agent-updater/packages/<target-package>` to force the checkout to match the remote exactly, discarding any local changes
     - Read the package's `INSTALL.md` or `README.md`
     - Check the diff from the stored `applied_sha` to the current head
+    - If the diff introduces a config surface not already present for this package (a new hook, a `settings.json`/`.mcp.json` key, the package's first skill/agent of a given kind), confirm the platform's *current* format for that surface before writing it — as described in the `agent-updater-repo-install` skill's *Confirm current platform conventions* step. Updates that only change prose or already-placed surfaces need no lookup.
     - Apply the relevant changes **for selected items only**, following [Selection](#selection) to decide which items are in scope and how to handle new ones
     - Update that package's `installed_files` to reflect what's now on disk. Each entry is a `{source, target, category, item}` — `source` is the path within the package's repo, `target` is the resulting local path (relative to the repo root) which differs from `source` when a name-clash rename applied, `category` is the section, and `item` is the item id:
       - Add an entry for every newly created file

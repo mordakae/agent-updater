@@ -34,10 +34,15 @@ description: Add a new package to the repo-level agent-updater setup — clone i
   - Record the outcome in `selection.<section>` (`rules`/`skills`/`agents`/`other`):
     - Everything → `{ mode: all }`
     - Specific items → `{ mode: subset, include: [<chosen ids>], declined: [<the rest that were offered>] }`
+- Before writing any files, confirm the platform's current configuration conventions for the surfaces this package touches (see [Confirm current platform conventions](#confirm-current-platform-conventions)).
 - Apply only the selected items. (Shell/out-of-directory items in **Other** still require the explicit approval described above, even when selected.)
   - Populate `installed_files` with an entry for every file created: `{source, target, category, item}` — `source` is the path within the package's repo, `target` is the resulting local path (relative to the host repo root) which differs from `source` only when a clash rename applied, `category` is the section, and `item` is the item id.
 - Set `sha` and `applied_sha` to the cloned HEAD, and set `in_sync` to `true`.
 - Confirm to the user what was installed, including any files that were renamed due to a clash.
+
+## Confirm current platform conventions
+
+Your training data may predate the current configuration format of the agent/harness you're installing into — where skills, rules, and agents live; frontmatter schema; `settings.json` and hook syntax; MCP config shape. Before writing any config to disk, research the platform's *current* documentation for the specific config surfaces this package touches, and use what you find to decide how each file is placed and formatted. This governs only the *how* of applying what the diff already contains — it is never license to restructure the package, second-guess the author, or apply anything beyond the diff. If you have no web access or the lookup is inconclusive, say so and fall back to the layout the package's own `INSTALL.md`/`README.md` specifies.
 
 ## Categorization
 
