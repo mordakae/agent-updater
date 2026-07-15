@@ -1,2 +1,5 @@
 # Package checkouts are agent-managed clones and must never be committed (mandatory — see INSTALL.md)
 agent-updater/packages/
+
+# Upgrade-override approvals are per-machine — never commit or share them (see INSTALL.md)
+agent-updater/approvals.local.yml

@@ -11,3 +11,12 @@ agent-updater:
   selection: {}
   # installed_files entries are { source, target, category, item }.
   installed_files: []
+  # upgrade is written at install only when the package ships its own upgrader (a
+  # scaffolding CLI, an update script) instead of config files to copy in. The update
+  # skill then runs `command` on cadence rather than diffing and applying files.
+  # Omit the whole block for the normal git diff-and-apply flow.
+  # This file may be committed, so `command` records only *what* the command is — never
+  # that anyone approved it. Approval is per-machine, in gitignored approvals.local.yml.
+  #   upgrade:
+  #     command: <exact command, matched against this machine's approvals.local.yml entry>
+  #     requires: [<external tools it needs, e.g. uv; empty when self-contained>]
