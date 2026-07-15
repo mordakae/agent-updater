@@ -27,6 +27,8 @@ Each level has:
 - An **on-demand skill** that does the real work: diff each package's stored sha against its remote, let the user choose Update All / decide individually with names only / decide individually with a change summary, force each accepted package's checkout to match the remote exactly (the checkout is agent-only — local drift is always discarded, never merged), then apply only the configuration-shaped, *selected* parts of the diff.
 - **Install/uninstall/select skills**, invoked directly by request rather than by the due-check, for adding a new package to the manifest, removing one (reversing its `installed_files` and deleting its checkout), or reconfiguring which pieces of an installed package are on disk.
 
+Agent Updater registers itself as a package in its own manifest, so the updater is kept current by the same mechanism as everything else — no hand-updating the thing whose job is to stop you hand-updating things.
+
 See `example-user-level/` and `example-repo-level/` for the concrete Claude Code implementation of both, and [INSTALL.md](INSTALL.md) for how the same shape maps onto a different agent's conventions.
 
 ### Selective install
